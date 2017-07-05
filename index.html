@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Sam Jam Engine 2017</title>
+	  <meta name="author" content="Chris Armstrong">
+	  <meta name="description" content="Simple 2d Game Engine Developed for SamJam2017">
+	  <meta name="keywords" content="HTML,JS,Game,Engine,Indie,Sam,Jam">
+  <style>
+	canvas {
+		border: 1px solid #d3d3d3;
+	}
+  </style>
+  </head>
+  <body onload = "gameStart()">
+	<canvas id="roomCanvas" width="500" height="500">
+	</canvas>
+	<br />
+	<a href=".">Reset Game</a>
+	<script>
+		var t = Date.now();
+		var ms_per_Step = 1000/60;
+		var roomCanvas = document.getElementById("roomCanvas");
+		var context = roomCanvas.getContext("2d");
+		
+		var loop;
+		
+		var roomObjects =[]; //List of Objects in the Room	 
+		
+		var player;
+		var burger;
+		var playerSpeed = 3;
+		var playerWidth = 32;
+		var playerHeight = 32;
+		var roomWidth = roomCanvas.width;
+		var roomHeight = roomCanvas.height;
+		
+		var maxGrass = 320 * 500;
+		var goalPercent = 0.4;
+		var turtleGrass = 0;
+		var burgerGrass = 0;
+		var startTime = Date.now();
+		var turtleStockYPos = [410, null, null, null, null, 
+			null, null, null, null, null, null, null];
+		var burgerStockYPos = [410, null, null, null, null, 
+			null, null, null, null, null, null, null];
+		
+		function roomObject (xPos, yPos, image)
+		{
+			this.xPos = xPos;
+			this.yPos = yPos;
+			this.speed = 0;
+			this.direction = 0;
+			this.image = image;
+			this.depth = 0;
+			this.specialType = "none";
+			this.deleted = false;
+		}
+		
+		var turtleImage = new Image();
+		turtleImage.src = "images\\Turtle_32by32.png";
+		
+		var burgerImage = new Image();
+		burgerImage.src = "images\\Burger_32by32.png";
+		
+		var grass32 = new Image();
+		grass32.src = "images\\Grass_32by32.png";
+		
+		var grass16 = new Image();
+		grass16.src = "images\\Grass_16by16.png";
+		
+		var grass8 = new Image();
+		grass8.src = "images\\Grass_8by8.png";
+		
+		var grass4 = new Image();
+		grass4.src = "images\\Grass_4by4.png";
+		
+		var grass2 = new Image();
+		grass2.src = "images\\Grass_2by2.png";
+		
+		var grass1 = new Image();
+		grass1.src = "images\\Grass_1by1.png";
+		
+		function gameStart()
+		{
+			setup();
+			t = Date.now();
+			
+			document.addEventListener("keydown", keyDown);
+			document.addEventListener("keyup", keyUp);
+			
+			loop = setInterval(gameLoop, 10);
+		}
+		
+		function setup()
+		{
+			//Setup Room
+			roomObjects.push(new roomObject(100,100, turtleImage));
+			player = 0;
+			
+			roomObjects.push(new roomObject(368,188, burgerImage));
+			burger = 1;
+			moveBurgerRandom();
+			
+			for (i = 0; i < 500; i += 32)
+			{
+				for (j = 0; j < 300; j += 32)
+				{
+					var g = new roomObject(i, j, grass32);
+					g.depth = 1;
+					g.specialType = "Grass32";
+					roomObjects.push(g);
+				}
+			}
+			context.beginPath();
+			context.rect(10, 330, 480, 160);
+			context.strokeStyle = "black";
+			context.stroke();
+			
+			context.beginPath();
+			context.moveTo(10,410);
+			context.lineTo(490,410);
+			context.stroke();
+			
+			context.beginPath();
+			context.moveTo(10,385);
+			context.lineTo(490,385);
+			context.stroke();
+			
+			context.beginPath();
+			context.moveTo(10,360);
+			context.lineTo(490,360);
+			context.stroke();
+			
+			context.beginPath();
+			context.moveTo(10,435);
+			context.lineTo(490,435);
+			context.stroke();
+			
+			context.beginPath();
+			context.moveTo(10,460);
+			context.lineTo(490,460);
+			context.stroke();
+			
+			
+			context.font = "17px Arial";
+			context.fillText("LAWN CARE SERVICES: PRICE-PER-SHARE:", 15, 350);
+			
+			context.font = "15px Arial";
+			context.fillStyle = "green";
+			context.fillText("TRTL", 15, 485)
+			context.fillStyle = "red";
+			context.fillText("BRGR", 70, 485);
+		}
+		
+		function gameLoop()
+		{
+			//Get time between last and current frame
+			var delta = Date.now() - t;	
+			var d = delta / ms_per_Step;
+			t = Date.now();
+			
+			for (i = 0; i < 11; i++)
+			{
+				if ((Date.now() - startTime > 1000*i) && (turtleStockYPos[i] == null))
+				{
+					moveBurgerRandom();
+					
+					currentGoalPercent = i/10 * goalPercent;
+					currentPercent = turtleGrass / maxGrass;
+					cumPercent = currentPercent / currentGoalPercent;
+					percentYPos = 485 - 150 * cumPercent
+					turtleStockYPos[i] = percentYPos;
+					
+					context.lineWidth = 5;
+					context.strokeStyle = "green";
+					context.beginPath();
+					context.moveTo(10 + (i-1)*48,turtleStockYPos[i-1]);
+					context.lineTo(10 + i*48,turtleStockYPos[i]);
+					context.stroke();
+					
+					context.fillStyle = "black";
+					context.font = "17px Arial";
+					context.fillText("LAWN CARE SERVICES: PRICE-PER-SHARE:", 15, 350);
+				}
+				
+				if ((Date.now() - startTime > 1000*i) && (burgerStockYPos[i] == null))
+				{
+					currentGoalPercent = i/10 * goalPercent;
+					currentPercent = burgerGrass / maxGrass;
+					cumPercent = currentPercent / currentGoalPercent;
+					percentYPos = 485 - 150 * cumPercent
+					burgerStockYPos[i] = percentYPos;
+					
+					context.lineWidth = 5;
+					context.strokeStyle = "red";
+					context.beginPath();
+					context.moveTo(10 + (i-1)*48,burgerStockYPos[i-1]);
+					context.lineTo(10 + i*48,burgerStockYPos[i]);
+					context.stroke();
+				}
+				if (turtleStockYPos[10] != null)
+				{
+					clearInterval(loop);
+				}
+			}
+			
+			//Clear the Canvas
+			context.clearRect(0, 0, roomCanvas.width, 320);
+			
+			//Color the background
+			context.beginPath();
+			context.rect(0, 0, 500, 320);
+			context.fillStyle = "tan";
+			context.fill();
+			
+			//Iterate through depth values, with j == 2 for housekeeping (ie deletion, collision detection)
+			for (j = 2; j > -2; j--)
+			{
+				for (i = 0; i < roomObjects.length; i++)
+				{
+					//Get object from list
+					var o = roomObjects[i];
+					if (o.depth == j)
+					{
+						//Move all objects on canvas
+						var xStep = o.xPos + o.speed * Math.cos(o.direction / 180 * Math.PI) * d;
+						var yStep = o.yPos - o.speed * Math.sin(o.direction / 180 * Math.PI) * d;
+						if ((xStep > 0) && (xStep < roomWidth - playerWidth))
+						{
+							o.xPos = xStep;
+						}
+						if ((yStep > 0) && (yStep < roomHeight - playerHeight - 180))
+						{
+							o.yPos = yStep;
+						}
+						
+						//Draw all objects on canvas
+						context.drawImage(o.image, o.xPos, o.yPos);
+					}	
+					else if (j == 2)
+					{
+						if (o.deleted)
+						{
+							roomObjects.splice(i, 1);
+							i--;
+						}
+						else if (o.specialType == "Grass32")
+						{
+							var rectGrass = getRect(o.xPos, o.yPos, 32);
+							
+							var circPlayer = getCirc(roomObjects[player].xPos + 16, 
+								roomObjects[player].yPos + 16, 16);
+							
+							var rectBurger = getRect(roomObjects[burger].xPos, 
+								roomObjects[burger].yPos, 32);
+								
+							if ((intersectCircleRect(rectGrass, circPlayer)) 
+							|| (intersectRect(rectGrass, rectBurger)))
+							{
+								o.deleted = true;
+								
+								var g = new roomObject(o.xPos, o.yPos, grass16);
+								g.depth = 1;
+								g.specialType = "Grass16";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+16, o.yPos, grass16);
+								g.depth = 1;
+								g.specialType = "Grass16";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+16, o.yPos+16, grass16);
+								g.depth = 1;
+								g.specialType = "Grass16";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos, o.yPos+16, grass16);
+								g.depth = 1;
+								g.specialType = "Grass16";
+								roomObjects.push(g);
+							}
+						}
+						else if (o.specialType == "Grass16")
+						{
+							var rectGrass = getRect(o.xPos, o.yPos, 16);
+							
+							var circPlayer = getCirc(roomObjects[player].xPos + 16, 
+								roomObjects[player].yPos + 16, 16);
+							
+							var rectBurger = getRect(roomObjects[burger].xPos, 
+								roomObjects[burger].yPos, 32);
+								
+							if ((intersectCircleRect(rectGrass, circPlayer)) 
+							|| (intersectRect(rectGrass, rectBurger)))
+							{
+								o.deleted = true;
+								
+								var g = new roomObject(o.xPos, o.yPos, grass8);
+								g.depth = 1;
+								g.specialType = "Grass8";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+8, o.yPos, grass8);
+								g.depth = 1;
+								g.specialType = "Grass8";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+8, o.yPos+8, grass8);
+								g.depth = 1;
+								g.specialType = "Grass8";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos, o.yPos+8, grass8);
+								g.depth = 1;
+								g.specialType = "Grass8";
+								roomObjects.push(g);
+							}
+							
+						}
+						else if (o.specialType == "Grass8")
+						{
+							var rectGrass = getRect(o.xPos, o.yPos, 8);
+							
+							var circPlayer = getCirc(roomObjects[player].xPos + 16, 
+								roomObjects[player].yPos + 16, 16);
+							
+							var rectBurger = getRect(roomObjects[burger].xPos, 
+								roomObjects[burger].yPos, 32);
+								
+							if ((intersectCircleRect(rectGrass, circPlayer)) 
+							|| (intersectRect(rectGrass, rectBurger)))
+							{
+								o.deleted = true;
+								
+								var g = new roomObject(o.xPos, o.yPos, grass4);
+								g.depth = 1;
+								g.specialType = "Grass4";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+4, o.yPos, grass4);
+								g.depth = 1;
+								g.specialType = "Grass4";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+4, o.yPos+4, grass4);
+								g.depth = 1;
+								g.specialType = "Grass4";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos, o.yPos+4, grass4);
+								g.depth = 1;
+								g.specialType = "Grass4";
+								roomObjects.push(g);
+							}
+							
+						}
+						else if (o.specialType == "Grass4")
+						{
+							var rectGrass = getRect(o.xPos, o.yPos, 4);
+							
+							var circPlayer = getCirc(roomObjects[player].xPos + 16, 
+								roomObjects[player].yPos + 16, 16);
+							
+							var rectBurger = getRect(roomObjects[burger].xPos, 
+								roomObjects[burger].yPos, 32);
+								
+							if ((intersectCircleRect(rectGrass, circPlayer)) 
+							|| (intersectRect(rectGrass, rectBurger)))
+							{
+								o.deleted = true;
+								
+								var g = new roomObject(o.xPos, o.yPos, grass2);
+								g.depth = 1;
+								g.specialType = "Grass2";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+2, o.yPos, grass2);
+								g.depth = 1;
+								g.specialType = "Grass2";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+2, o.yPos+2, grass2);
+								g.depth = 1;
+								g.specialType = "Grass2";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos, o.yPos+2, grass2);
+								g.depth = 1;
+								g.specialType = "Grass2";
+								roomObjects.push(g);
+							}
+							
+						}
+						else if (o.specialType == "Grass2")
+						{
+							var rectGrass = getRect(o.xPos, o.yPos, 2);
+							
+							var circPlayer = getCirc(roomObjects[player].xPos + 16, 
+								roomObjects[player].yPos + 16, 16);
+							
+							var rectBurger = getRect(roomObjects[burger].xPos, 
+								roomObjects[burger].yPos, 32);
+								
+							if ((intersectCircleRect(rectGrass, circPlayer)) 
+							|| (intersectRect(rectGrass, rectBurger)))
+							{
+								o.deleted = true;
+								
+								var g = new roomObject(o.xPos, o.yPos, grass1);
+								g.depth = 1;
+								g.specialType = "Grass1";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+1, o.yPos, grass1);
+								g.depth = 1;
+								g.specialType = "Grass1";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos+1, o.yPos+1, grass1);
+								g.depth = 1;
+								g.specialType = "Grass1";
+								roomObjects.push(g);
+								
+								g = new roomObject(o.xPos, o.yPos+1, grass1);
+								g.depth = 1;
+								g.specialType = "Grass1";
+								roomObjects.push(g);
+							}
+							
+						}
+						else if (o.specialType == "Grass1")
+						{
+							var rectGrass = getRect(o.xPos, o.yPos, 1);
+							
+							var circPlayer = getCirc(roomObjects[player].xPos + 16, 
+								roomObjects[player].yPos + 16, 16);
+							
+							var rectBurger = getRect(roomObjects[burger].xPos, 
+								roomObjects[burger].yPos, 32);
+								
+							if ((intersectCircleRect(rectGrass, circPlayer)) 
+							|| (intersectRect(rectGrass, rectBurger)))
+							{
+								o.deleted = true;
+								if (intersectCircleRect(rectGrass, circPlayer))
+								{
+									turtleGrass++;
+								}
+								else
+								{
+									burgerGrass++;
+								}
+							}
+							
+						}
+						
+					}
+				}
+			}
+		}
+		
+		var up = false;
+		var down = false;
+		var left = false;
+		var right = false;
+		
+		function keyDown(e)
+		{
+			var k = e.keyCode;
+			switch (k) {
+				case 38: //up
+					up = true;
+					updatePlayerMove();
+					break;
+				
+				case 40: //down
+					down = true;
+					updatePlayerMove();
+					break;
+					
+				case 37: //left
+					left = true;
+					updatePlayerMove();
+					break;
+					
+				case 39: //right
+					right = true;
+					updatePlayerMove();
+					break;
+			}
+		}
+		
+		function keyUp(e)
+		{
+			var k = e.keyCode;
+			switch (k) 
+			{
+				case 38: //up
+					up = false;
+					updatePlayerMove();
+					break;
+				
+				case 40: //down
+					down = false;
+					updatePlayerMove();
+					break;
+					
+				case 37: //left
+					left = false;
+					updatePlayerMove();
+					break;
+					
+				case 39: //right
+					right = false;
+					updatePlayerMove();
+					break;
+			}	
+		}
+		
+		function updatePlayerMove()
+		{
+			var hspeed = 0;
+			var vspeed = 0;
+			if (up)
+			{
+				vspeed = -1;
+			}
+			else if (down)
+			{
+				vspeed = 1;
+			}
+			if (right)
+			{
+				hspeed = 1;
+			}
+			else if (left)
+			{
+				hspeed = -1;
+			}
+			if ((vspeed == 0) && (hspeed == 0))
+			{
+				roomObjects[player].speed = 0;
+			}
+			else
+			{
+				roomObjects[player].speed = playerSpeed;
+			}
+			var rad = Math.atan2(-vspeed, hspeed);
+			roomObjects[player].direction = rad * (180 / Math.PI);
+		}
+		
+		function intersectRect(r1, r2) 
+		{
+			return !(r2.left >= r1.right || r2.right <= r1.left || r2.top >= r1.bottom || r2.bottom <= r1.top);
+		}
+		
+		function intersectCircleRect(r,circle)
+		{
+			var rect = 
+			{
+				x: r.left,
+				y: r.top,
+				w: r.right - r.left,
+				h: r.bottom - r.top
+			};
+			
+			var distX = Math.abs(circle.x - rect.x-rect.w/2);
+			var distY = Math.abs(circle.y - rect.y-rect.h/2);
+
+			if (distX > (rect.w/2 + circle.r)) { return false; }
+			if (distY > (rect.h/2 + circle.r)) { return false; }
+
+			if (distX <= (rect.w/2)) { return true; } 
+			if (distY <= (rect.h/2)) { return true; }
+
+			var dx=distX-rect.w/2;
+			var dy=distY-rect.h/2;
+			return (dx*dx+dy*dy<=(circle.r*circle.r));
+		}
+		
+		function getRect(x, y, s)
+		{
+			var g =
+			{
+				left: x,
+				top: y,
+				right: x + s,
+				bottom: y + s
+			};
+			return g;
+		}
+		
+		function getCirc(x, y, r)
+		{
+			var c =
+			{
+				x: roomObjects[player].xPos + 16,
+				y: roomObjects[player].yPos + 16,
+				r: 16								
+			};
+			return c;
+		}
+		
+		function moveBurgerRandom()
+		{
+			if (roomObjects[burger].speed == 0)
+			{
+				roomObjects[burger].speed = 2;
+				roomObjects[burger].direction = 90;
+			}
+			else
+			{
+				roomObjects[burger].speed = 2;
+				roomObjects[burger].direction += 30 + Math.floor(Math.random()*30);
+			}
+		}
+	</script>
+  </body>
+</html>
